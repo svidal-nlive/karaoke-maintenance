@@ -33,6 +33,21 @@ Utility, maintenance, and cookie-exporter microservices for the Karaoke stack.
     docker compose up -d
     ```
 
+5. This project requires the shared library karaoke-shared.
+   Install via pip:
+
+    ```
+    python -m pip install karaoke-shared
+    ```
+
+   Or, for the latest development version:
+
+    ```
+    python -m pip install git+https://github.com/svidal-nlive/karaoke-shared.git@main
+    ```
+
+   The included requirements.txt installs the latest tagged development version by default.
+
 ## Notes
 
 - All volumes and networks must match those used by the main pipeline for full integration.
