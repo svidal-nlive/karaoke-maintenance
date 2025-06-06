@@ -1,13 +1,37 @@
 # version: "3.9"
 ---
 services:
+  maintenance:
+    build: ./maintenance
+    args: [PUID=${PUID}, PGID=${PGID}]
+    user: "${PUID}:${PGID}"
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - CLEANUP_CRON_SCHEDULE=${CLEANUP_CRON_SCHEDULE}
+      - TZ=${TZ}
+    volumes:
+      - logs:/logs
+    networks: [backend]
+
+  cookies_exporter:
+    build: ./playwright_cookie_exporter
+    user: "${PUID}:${PGID}"
+    environment:
+      - EXPORT_INTERVAL_MINUTES=60
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - cookies:/cookies:rw
+      - playwright_profile:/profile
+    restart: unless-stopped
+    networks: [backend]
+
   volume-init:
-    build:
-      context: ./volume-init
-      args:
-        - PUID=${PUID}
-        - PGID=${PGID}
-    container_name: ${STACK_PREFIX}_volume_init
+    build: ./volume-init
+    args: [PUID=${PUID}, PGID=${PGID}]
     user: "0:0"
     command: []
     volumes:
@@ -18,71 +42,30 @@ services:
       - output:/output
       - organized:/organized
       - stems:/stems
-      - cookies:/cookies # <-- ADD THIS
-      - chromium_config:/chromium_config # <-- ADD THIS if you want to pre-create
-      - playwright_profile:/profile # <-- ADD THIS if you want to pre-create
+      - cookies:/cookies
+      - playwright_profile:/profile
     restart: "no"
 
-  maintenance:
-    build:
-      context: .
-      dockerfile: maintenance/Dockerfile
-      args:
-        - PUID=${PUID}
-        - PGID=${PGID}
-    container_name: ${STACK_PREFIX}_maintenance
-    user: "${PUID}:${PGID}"
-    restart: unless-stopped
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - CLEANUP_CRON_SCHEDULE=${CLEANUP_CRON_SCHEDULE}
-    volumes:
-      - logs:/logs
-    networks:
-      - backend
-    depends_on:
-      volume-init:
-        condition: service_completed_successfully
-
-  cookies_exporter:
-    build:
-      context: ./playwright_cookie_exporter
-    container_name: cookies_exporter
-    environment:
-      - EXPORT_INTERVAL_MINUTES=60
-      - TZ=${TZ}
-      - PUID=${PUID}
-      - PGID=${PGID}
-    volumes:
-      - cookies:/cookies:rw
-      - playwright_profile:/profile # Persistent browser profile
-    restart: unless-stopped
-    networks:
-      - backend
-
 volumes:
+  logs:
+    external: true
+  cookies:
+    external: true
   input:
     external: true
   queue:
     external: true
-  stems:
+  metadata:
     external: true
   output:
     external: true
   organized:
     external: true
-  metadata:
-    external: true
-  logs:
-    external: true
-  cookies:
-    external: true
-  chromium_config:
+  stems:
     external: true
   playwright_profile:
     external: true
 
 networks:
   backend:
-    name: ${BACKEND_NETWORK}
+    external: true
