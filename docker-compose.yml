@@ -1,0 +1,88 @@
+# version: "3.9"
+---
+services:
+  volume-init:
+    build:
+      context: ./volume-init
+      args:
+        - PUID=${PUID}
+        - PGID=${PGID}
+    container_name: ${STACK_PREFIX}_volume_init
+    user: "0:0"
+    command: []
+    volumes:
+      - input:/input
+      - queue:/queue
+      - logs:/logs
+      - metadata:/metadata
+      - output:/output
+      - organized:/organized
+      - stems:/stems
+      - cookies:/cookies # <-- ADD THIS
+      - chromium_config:/chromium_config # <-- ADD THIS if you want to pre-create
+      - playwright_profile:/profile # <-- ADD THIS if you want to pre-create
+    restart: "no"
+
+  maintenance:
+    build:
+      context: .
+      dockerfile: maintenance/Dockerfile
+      args:
+        - PUID=${PUID}
+        - PGID=${PGID}
+    container_name: ${STACK_PREFIX}_maintenance
+    user: "${PUID}:${PGID}"
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - CLEANUP_CRON_SCHEDULE=${CLEANUP_CRON_SCHEDULE}
+    volumes:
+      - logs:/logs
+    networks:
+      - backend
+    depends_on:
+      volume-init:
+        condition: service_completed_successfully
+
+  cookies_exporter:
+    build:
+      context: ./playwright_cookie_exporter
+    container_name: cookies_exporter
+    environment:
+      - EXPORT_INTERVAL_MINUTES=60
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - cookies:/cookies:rw
+      - playwright_profile:/profile # Persistent browser profile
+    restart: unless-stopped
+    networks:
+      - backend
+
+volumes:
+  input:
+    external: true
+  queue:
+    external: true
+  stems:
+    external: true
+  output:
+    external: true
+  organized:
+    external: true
+  metadata:
+    external: true
+  logs:
+    external: true
+  cookies:
+    external: true
+  chromium_config:
+    external: true
+  playwright_profile:
+    external: true
+
+networks:
+  backend:
+    name: ${BACKEND_NETWORK}
