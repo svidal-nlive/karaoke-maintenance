@@ -2,7 +2,7 @@ import os
 import argparse
 import shutil
 import logging
-from shared.pipeline_utils import redis_client, notify_all
+from karaoke_shared.pipeline_utils import redis_client, notify_all
 
 # Logging config
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
